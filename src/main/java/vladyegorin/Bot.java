@@ -13,6 +13,8 @@ import java.util.Properties;
 public class Bot extends TelegramLongPollingBot {
 
     private String botToken;
+    public Groq groqie;
+
     @Override
     public String getBotUsername() {
         return "chatgpttelegrammmm_bot";
@@ -25,6 +27,7 @@ public class Bot extends TelegramLongPollingBot {
 
     public Bot() {
         // Load properties from config file in resources folder
+        this.groqie = new Groq();
         Properties properties = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
@@ -32,6 +35,7 @@ public class Bot extends TelegramLongPollingBot {
             }
             properties.load(input);
             botToken = properties.getProperty("TELEGRAM_BOT_TOKEN");
+            System.out.println("Loaded bot token: " + botToken);
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(1); // Exit if the configuration file can't be loaded
@@ -48,28 +52,37 @@ public class Bot extends TelegramLongPollingBot {
             System.out.println("\nNew message!");
             System.out.println("User ID: " + id);
             System.out.println("Username: " + user.getUserName());
-
-
-
             if (msg.hasText()) {
                 System.out.println("Text message: " + msg.getText());
-
             } else {
-                //IDontUnderstand(msg, id);
+                //IDontUnderstand(msg, id); // Implement error handling if necessary
             }
+
+            String airesponse = null;
+            String text = msg.getText();
+            try {
+                airesponse = groqie.sendMessage(text);
+            } catch (IOException e) {
+                airesponse = "Sorry, I couldn't process your request. Please try again later.";
+                e.printStackTrace();  // Log the error
+            }
+
+            System.out.println("Response: " + airesponse);
+
+            sendText(id, airesponse);  // Send response back to the user
         }
     }
 
-
-    public void sendText(Long who, String what){
+    public void sendText(Long who, String what) {
         SendMessage sm = SendMessage.builder()
-                .chatId(who.toString()) //Who are we sending a message to
-                .text(what).build();    //Message content
+                .chatId(who.toString()) // Who are we sending a message to
+                .text(what) // Message content
+                .build();
+
         try {
-            execute(sm);                        //Actually sending the message
+            execute(sm); // Actually sending the message
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);      //Any error will be printed here
+            throw new RuntimeException(e); // Any error will be printed here
         }
     }
-
 }
